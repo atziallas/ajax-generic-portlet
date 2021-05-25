@@ -16,6 +16,7 @@ services:
       - ./agp:/opt/agp/
       - ./deploy:/opt/liferay/deploy
       - ./liferay:/etc/opt/liferay
+    entrypoint: /etc/opt/liferay/start.sh
     healthcheck:
       test: [ "CMD", "curl", "-fsS", "http://localhost:8080/c/portal/layout" ]
       start_period: 1m

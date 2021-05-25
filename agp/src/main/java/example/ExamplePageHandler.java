@@ -21,7 +21,7 @@ public class ExamplePageHandler implements PageHandler {
 		switch (argument) {
 		case "test":
 			Map<String, Object> responseMap = new HashMap<String, Object>();
-			responseMap.put("test", "you sent:" + payload);
+			responseMap.put("payload", "you sent:" + payload);
 			return new GenericResponse(ResponseType.JSON, new Gson().toJson(responseMap));
 		case "redirect":
 			String redirectPage = "another";

@@ -9,6 +9,7 @@
 </script>
 
 <script type="text/javascript" src="${pageContext.request.contextPath}/example.js"></script>
+<div>Check Javascript console after pressing buttons</div>
 <button onclick="json()">Send and receive JSON</button>
 <button onclick="redirect()">Send JSON and receive redirect URL to new jsp</button>
 <button onclick="file()">Send JSON and receive url to file</button>

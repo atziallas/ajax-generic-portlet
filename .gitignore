@@ -3,6 +3,10 @@
 
 # Gradle
 .gradle
+gradle
+build
+gradlew
+gradlew.bat
 
 # Compiled class file
 *.class

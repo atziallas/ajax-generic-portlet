@@ -23,7 +23,8 @@ const callApi = (arg) => fetch(ajaxUrl, {
     return response.json();
 }).then(response => {
     checkRedirect(response)
-    alert(response)
+    console.log("Server ajax response:")
+    console.log(response)
 })
 
 const checkRedirect = (response) => {
