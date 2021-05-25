@@ -1,5 +1,5 @@
 # ajax-generic-portlet
-AJAX services for Java portlets that is Portal agnostic
+Portal agnostic AJAX services for Java portlets
 
 You wanted to use your favourite JS framework on your java portlet, but you don't want to be tied with an Ajax/REST
 implementation of a specific Java Portal implementation?
@@ -7,7 +7,7 @@ implementation of a specific Java Portal implementation?
 Now you can! **Portal agnostic** AJAX implementation that supports the JSR-286 specification (Java Portlet Specification
 2).
 
-Utilizes **JSR-286 serveResource** lifecycle method to handle AJAX request and serve JSON to the client.
+Extends **javax.portlet.GenericPortlet** and utilizes **JSR-286 serveResource** lifecycle method to handle AJAX request and serve JSON to the client.
 
 <a href="https://github.com/atziallas/ajax-generic-portlet/blob/main/LICENSE">
 <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="React Native is released under the MIT license." data-canonical-src="https://img.shields.io/badge/license-MIT-blue.svg" style="max-width:100%;">
