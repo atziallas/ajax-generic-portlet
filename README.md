@@ -1,4 +1,5 @@
 # ajax-generic-portlet
+AJAX services for Java portlets that is Portal agnostic
 
 You wanted to use your favourite JS framework on your java portlet, but you don't want to be tied with an Ajax/REST
 implementation of a specific Java Portal implementation?
