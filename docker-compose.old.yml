@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  portal:
+    image: liferay/portal:7.4.0-ga1
+    tty: true
+    stdin_open: true
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./liferay:/mnt/liferay
