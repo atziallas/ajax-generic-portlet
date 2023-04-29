@@ -1,9 +1,9 @@
 package agp.ajax;
 
-import static agp.ajax.AjaxHandler.FILENAME;
-import static agp.ajax.AjaxHandler.FILE_PARAMETER;
-import static agp.ajax.AjaxHandler.PENDING;
-import static agp.ajax.AjaxHandler.PENDING_FILE;
+import static agp.ajax.ApplicationHandler.FILENAME;
+import static agp.ajax.ApplicationHandler.FILE_PARAMETER;
+import static agp.ajax.ApplicationHandler.PENDING;
+import static agp.ajax.ApplicationHandler.PENDING_FILE;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -21,7 +21,7 @@ import org.apache.commons.io.IOUtils;
 public class AjaxServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
-	AjaxHandler handler;
+	ApplicationHandler handler;
 
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -29,7 +29,7 @@ public class AjaxServlet extends HttpServlet {
 		Class<?> clazz;
 		try {
 			clazz = Class.forName(handlerClass);
-			handler = (AjaxHandler) clazz.newInstance();
+			handler = (ApplicationHandler) clazz.newInstance();
 		} catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
 			throw new RuntimeException("Incorrect parameter handler-class in portlet.xml");
 		}
@@ -90,14 +90,14 @@ public class AjaxServlet extends HttpServlet {
 			String url = request.getRequestURL().toString() + "?" + FILE_PARAMETER + "=" + PENDING;
 			session.setAttribute(PENDING_FILE, handlerResponse.getFile());
 			session.setAttribute(FILENAME, handlerResponse.getResponse());
-			AjaxHandler.convertResponseToRedirect(handlerResponse, url);
+			ApplicationHandler.convertResponseToRedirect(handlerResponse, url);
 		}
 	}
 
 	private void checkForRedirectResponse(GenericResponse handlerResponse, HttpServletRequest request) {
 		if (ResponseType.REDIRECT.equals(handlerResponse.getResponseType())) {
 			String url = request.getRequestURL().toString() + "?page=" + handlerResponse.getResponse();
-			AjaxHandler.convertResponseToRedirect(handlerResponse, url.toString());
+			ApplicationHandler.convertResponseToRedirect(handlerResponse, url.toString());
 		}
 	}
 }

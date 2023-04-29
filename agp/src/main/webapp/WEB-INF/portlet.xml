@@ -11,7 +11,7 @@
 		</portlet-class>
 		<init-param>
 			<name>handler-class</name>
-			<value>example.ExampleBaseHandler</value>
+			<value>example.ExampleAppHandler</value>
 		</init-param>
 		<init-param>
 			<name>check-auth-token</name>

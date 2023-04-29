@@ -13,8 +13,9 @@ import agp.ajax.PageHandler;
 import agp.ajax.ResponseType;
 
 
-public class ExamplePageHandler implements PageHandler {
+public class ExamplePageHandler extends PageHandler {
 	@Override
+	// payload has the XHR request payload as String made by the client
 	public GenericResponse handleAjaxRequest(String payload, GenericSession session) {
 	    //the request payload and current portlet session are routed by the base AjaxHandler
 		Map<String, Object> request = new Gson().fromJson(payload, Map.class);
@@ -30,11 +31,21 @@ public class ExamplePageHandler implements PageHandler {
 			//respond with a Redirect URL to another JSP file
 			return new GenericResponse(ResponseType.REDIRECT, redirectPage);
 		case "file":
-			//respond with a Redirect URL that downloads a file
+			//respond with a file
 			byte[] file = Base64.decodeBase64("RVhBTVBMRSBGSUxFIFNFTlQ=");
-			return new GenericResponse(ResponseType.FILE, file,"test.txt");
+			GenericResponse response = new GenericResponse(ResponseType.FILE, file,"test.txt");
+			response.setContentType("text/plain");
+			return response;
 		default:
 			return new GenericResponse(ResponseType.JSON, "");
 		}
+	}
+
+	// this method checks if the user has the right to "view" this page
+	// you can check the current session and return the page you want to be rendered
+	// you could redirect to an error page here instead of rendering the page that was requested
+	@Override
+	public String handlePageRequest(String page, GenericSession session) {
+		return page;
 	}
 }

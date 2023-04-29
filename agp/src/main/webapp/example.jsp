@@ -12,6 +12,6 @@
 <div>Check Javascript console after pressing buttons</div>
 <button onclick="json()">Send and receive JSON</button>
 <button onclick="redirect()">Send JSON and receive redirect URL to new jsp</button>
-<button onclick="file()">Send JSON and receive url to file</button>
+<button onclick="file()">Send JSON and receive a file</button>
 </BODY>
 </HTML>

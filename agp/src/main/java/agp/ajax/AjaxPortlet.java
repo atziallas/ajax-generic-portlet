@@ -1,11 +1,11 @@
 package agp.ajax;
 
-import static agp.ajax.AjaxHandler.CONTENT_TYPE_HTML;
-import static agp.ajax.AjaxHandler.CONTENT_TYPE_JSON;
-import static agp.ajax.AjaxHandler.FILENAME;
-import static agp.ajax.AjaxHandler.FILE_PARAMETER;
-import static agp.ajax.AjaxHandler.PENDING;
-import static agp.ajax.AjaxHandler.PENDING_FILE;
+import static agp.ajax.ApplicationHandler.CONTENT_TYPE_HTML;
+import static agp.ajax.ApplicationHandler.CONTENT_TYPE_JSON;
+import static agp.ajax.ApplicationHandler.FILENAME;
+import static agp.ajax.ApplicationHandler.FILE_PARAMETER;
+import static agp.ajax.ApplicationHandler.PENDING;
+import static agp.ajax.ApplicationHandler.PENDING_FILE;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -22,12 +22,13 @@ import javax.portlet.ResourceRequest;
 import javax.portlet.ResourceResponse;
 import javax.portlet.ResourceURL;
 import javax.servlet.http.HttpServletRequest;
+import javax.xml.ws.Response;
 
 import org.apache.commons.io.IOUtils;
 
 public class AjaxPortlet extends GenericPortlet {
 
-	AjaxHandler handler;
+	ApplicationHandler appHandler;
 
 	@Override
 	public void init() {
@@ -35,7 +36,7 @@ public class AjaxPortlet extends GenericPortlet {
 		Class<?> clazz;
 		try {
 			clazz = Class.forName(handlerClass);
-			handler = (AjaxHandler) clazz.newInstance();
+			appHandler = (ApplicationHandler) clazz.newInstance();
 		} catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
 			throw new RuntimeException("Incorrect parameter handler-class in portlet.xml");
 		}
@@ -47,11 +48,15 @@ public class AjaxPortlet extends GenericPortlet {
 	// and stores it to the session
 	public void doView(RenderRequest request, RenderResponse response) throws PortletException, IOException {
 		String page = request.getParameter("page");
-		if (page == null) // if this is the initial render
-			page = handler.getDefaultPage();
 
 		// create a csrf token and store it to the session
 		GenericSession session = new GenericSession(request.getPortletSession());
+
+		if (page == null) // if this is the initial render
+			page = appHandler.getDefaultPage();
+		else // go through handlePageRequest to see if you have rights to show this page
+			page = appHandler.getPageHandler(page).handlePageRequest(page, session);
+
 		String csrfToken = CsrfUtils.registerCSRFToken(session, page);
 
 		// create the resource url for AJAX calls
@@ -68,56 +73,42 @@ public class AjaxPortlet extends GenericPortlet {
 		rd.include(request, response);
 	}
 
-	// Responds only with JSON. Redirect to another page is possible by creating and
-	// sending a url to javascript.
-	public void serveResource(ResourceRequest request, ResourceResponse response) throws PortletException, IOException {
+	// all ajax communication is routed from this method
+	public void serveResource(ResourceRequest request, ResourceResponse response) throws PortletException, IOException,UnsupportedEncodingException {
 		GenericSession session = new GenericSession(request.getPortletSession());
-		if (PENDING.equals(request.getParameter(FILE_PARAMETER))) {
-			fileResponse(response, session);
-		} else {
-			jsonResponse(request, response, session);
-		}
-	}
-
-	private void jsonResponse(ResourceRequest request, ResourceResponse response, GenericSession session)
-			throws IOException, UnsupportedEncodingException {
 		String payload = IOUtils.toString(request.getReader());
 		HttpServletRequest httpRequest = (HttpServletRequest) request.getAttribute("httpRequest");
 		String csrfToken = httpRequest.getHeader("csrf-token");
 		String page = request.getParameter("page");
-		CsrfUtils.validateCSRFToken(page, csrfToken, session);
 
-		GenericResponse handlerResponse = handler.handleAjaxRequest(payload, page, session);
-		checkForRedirectResponse(handlerResponse, response);
-		checkForFileResponse(handlerResponse, response, session);
+		GenericResponse handlerResponse;
+		if (!CsrfUtils.validateCSRFToken(page, csrfToken, session)) {
+			handlerResponse = new GenericResponse(ResponseType.JSON, "Invalid CSRF Token");
+		} else {
+			handlerResponse = appHandler.handleAjaxRequest(payload, page, session);
+			if (handlerResponse.getContentType() == null) {
+				response.setContentType(CONTENT_TYPE_JSON);
+			}
+			else {
+				response.setContentType(handlerResponse.getContentType());
+			}
+			checkForRedirectResponse(handlerResponse, response);
+			checkForFileResponse(handlerResponse, response, session);
+		}
 
-		response.setContentType(CONTENT_TYPE_JSON);
 		PrintWriter writer = response.getWriter();
 		writer.write(handlerResponse.getResponse());
 	}
 
-	// this means previous response created a resource URL and stored a file in the
-	// session.
-	private void fileResponse(ResourceResponse response, GenericSession session) throws IOException {
-		byte[] file = (byte[]) session.getAttribute(PENDING_FILE);
-		OutputStream os = response.getPortletOutputStream();
-		os.write(file);
-		response.setProperty("Content-Disposition", "attachment; filename=" + session.getAttribute(FILENAME));
-		os.close();
-		session.removeAttribute(FILENAME);
-		session.removeAttribute(PENDING_FILE);
-	}
-
+	// this means PageHandler replied with a file
 	private void checkForFileResponse(GenericResponse handlerResponse, ResourceResponse response,
-			GenericSession session) {
+			GenericSession session) throws IOException {
 		if (ResponseType.FILE.equals(handlerResponse.getResponseType())) {
-			// create a resource for this file and store it in the session
-			ResourceURL url = response.createResourceURL();
-			url.setParameter(FILE_PARAMETER, PENDING);
-			session.setAttribute(PENDING_FILE, handlerResponse.getFile());
-			session.setAttribute(FILENAME, handlerResponse.getResponse());
-
-			AjaxHandler.convertResponseToRedirect(handlerResponse, url.toString());
+			byte[] file = (byte[]) handlerResponse.getFile();
+			OutputStream os = response.getPortletOutputStream();
+			os.write(file);
+			response.setProperty("Content-Disposition", "attachment; filename=" + handlerResponse.getResponse());
+			os.close();
 		}
 	}
 
@@ -129,7 +120,7 @@ public class AjaxPortlet extends GenericPortlet {
 			PortletURL url = response.createRenderURL();
 			// the page parameter defines which jsp will be loaded on doView method
 			url.setParameter("page", handlerResponse.getResponse());
-			AjaxHandler.convertResponseToRedirect(handlerResponse, url.toString());
+			ApplicationHandler.convertResponseToRedirect(handlerResponse, url.toString());
 		}
 	}
 }

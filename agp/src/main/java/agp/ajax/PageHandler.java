@@ -1,5 +1,16 @@
 package agp.ajax;
 
-public interface PageHandler {
-	public GenericResponse handleAjaxRequest(String payload, GenericSession session); 
+public abstract class PageHandler {
+
+	private String defaultPage;
+
+	public abstract String handlePageRequest(String page, GenericSession session); 
+	public abstract GenericResponse handleAjaxRequest(String payload, GenericSession session); 
+
+	public String getDefaultPage() {
+		return defaultPage;
+	}
+	public void setDefaultPage(String defaultPage) {
+		this.defaultPage = defaultPage;
+	}
 }
