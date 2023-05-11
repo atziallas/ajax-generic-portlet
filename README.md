@@ -9,6 +9,8 @@ Now you can! **Portal agnostic** AJAX implementation that supports the JSR-286 s
 
 Extends **javax.portlet.GenericPortlet** and utilizes **JSR-286 serveResource** lifecycle method to handle AJAX request and serve JSON to the client.
 
+This repository is a proof of concept on Liferay Portal 7.4.0 
+
 <a href="https://github.com/atziallas/ajax-generic-portlet/blob/main/LICENSE">
 <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="React Native is released under the MIT license." data-canonical-src="https://img.shields.io/badge/license-MIT-blue.svg" style="max-width:100%;">
 </a>
@@ -16,7 +18,7 @@ Extends **javax.portlet.GenericPortlet** and utilizes **JSR-286 serveResource** 
 ## 📋 Features
 
 - Plain JSP files are used for each portlet page. URL generation is also possible for clients to use
-  with `window.location.href`:
+  with `window.location.href` :
 
     - to redirect to another JSP
 
@@ -31,7 +33,7 @@ Extends **javax.portlet.GenericPortlet** and utilizes **JSR-286 serveResource** 
   use a portal for local development.
 
 
-- Repository contains a Dockerized proof of concept that uses Liferay Portal CE version 7.4.0-ga1
+- Repository contains a Dockerized proof of concept that uses Liferay Portal CE version 7.4.0-ga1 (of course this can work on any JSR-286 compliant portal)
 
 ## 🚀 How to run example
 Run `docker-compose up` inside base folder (next to docker-compose.yml)
@@ -43,6 +45,7 @@ Click on the pencil on the top right to edit the home page and select the widget
 
 Note: if you are running docker on windows, make sure /liferay/start.sh file has linux style endings (LF, not CRLF)
 
+You can use the VSCode Dev Containers extension to develop in the container with debugging, repo contains a .devcontainer.json file and a launch.json for attaching to Tomcat.
 ## 📖 Documentation
 
 Core implementation resides inside agp/src/main/java/agp/ajax folder
@@ -80,35 +83,39 @@ serve JSP files
 ```xml
 <portlet>
     ...
-    <portlet-class>agp.ajax.AjaxPortlet</portlet-class>
+    <portlet-name>ajaxgenericportlet</portlet-name>
+    <display-name>Ajax Generic Portlet</display-name>
+    <portlet-class>agp.ajax.AjaxPortlet
+    </portlet-class>
     <init-param>
         <name>handler-class</name>
-        <value>example.ExampleBaseHandler</value>
+        <value>example.ExampleAppHandler</value>
     </init-param>
     ...
 </portlet>
 ```
 
 <br/>
-The base handler that AjaxHandler and routes to the appropriate PageHandler:
+The base handler that extends ApplicationHandler and routes to the appropriate PageHandler:
 
 ```java
-public class ExampleBaseHandler extends AjaxHandler {
+public class ExampleAppHandler extends ApplicationHandler {
 
-    //return the name of the JSP file you want to be loaded as default
-    public String getDefaultPage() {
-        return "example";
-    }
+	// each JSP file has a corresponding PageHandler to handle Ajax Requests
+	@Override
+	public void init() {
+		// first argument is the name of the JSP file e.g. 'example.js'
+		// second argument is the PageHandler that's going to be used for that JSP
+		addPageHandler("example", new ExamplePageHandler());
+		addPageHandler("another", new AnotherPageHandler());
+	}
 
-    //Return a map, that links a JSP file name (the map key) to a PageHandler implementation.
-    //AjaxHandler will route the request payload to the underlying page handler
-    //You could use the same PageHandler for multiple JSP files
-    @Override
-    public Map<String, PageHandler> getPageHandlersMap() {
-        Map<String, PageHandler> map = new HashMap<String, PageHandler>();
-        map.put("example", new ExamplePageHandler());
-        return map;
-    }
+	//return the name of the JSP file you want to be loaded as default when the portlet loads
+	@Override
+	public String getDefaultPage() {
+		return "example";
+	}
+
 }
 ```
 
@@ -116,30 +123,41 @@ public class ExampleBaseHandler extends AjaxHandler {
 A page handler for a specific page:
 
 ```java
-public class ExamplePageHandler implements PageHandler {
-    @Override
-    public GenericResponse handleAjaxRequest(String payload, GenericSession session) {
-        //the request payload and current portlet session are routed by the base AjaxHandler
-        Map<String, Object> request = new Gson().fromJson(payload, Map.class);
-        String argument = request.get("arg").toString();
-        switch (argument) {
-            case "test":
-                Map<String, Object> responseMap = new HashMap<String, Object>();
-                responseMap.put("payload", "you sent:" + payload);
-                //respond with a JSON
-                return new GenericResponse(ResponseType.JSON, new Gson().toJson(responseMap));
-            case "redirect":
-                String redirectPage = "another";
-                //respond with a Redirect URL to another JSP file
-                return new GenericResponse(ResponseType.REDIRECT, redirectPage);
-            case "file":
-                //respond with a Redirect URL that downloads a file
-                byte[] file = Base64.decodeBase64("RVhBTVBMRSBGSUxFIFNFTlQ=");
-                return new GenericResponse(ResponseType.FILE, file, "test.txt");
-            default:
-                return new GenericResponse(ResponseType.JSON, "");
-        }
-    }
+public class ExamplePageHandler extends PageHandler {
+	@Override
+	// payload has the XHR request payload as String made by the client
+	public GenericResponse handleAjaxRequest(String payload, GenericSession session) {
+	    //the request payload and current portlet session are routed by the base AjaxHandler
+		Map<String, Object> request = new Gson().fromJson(payload, Map.class);
+		String argument = request.get("arg").toString();
+		switch (argument) {
+		case "test":
+			Map<String, Object> responseMap = new HashMap<String, Object>();
+			responseMap.put("payload", "you sent:" + payload);
+			//respond with a JSON
+			return new GenericResponse(ResponseType.JSON, new Gson().toJson(responseMap));
+		case "redirect":
+			String redirectPage = "another";
+			//respond with a Redirect URL to another JSP file
+			return new GenericResponse(ResponseType.REDIRECT, redirectPage);
+		case "file":
+			//respond with a file
+			byte[] file = Base64.decodeBase64("RVhBTVBMRSBGSUxFIFNFTlQ=");
+			GenericResponse response = new GenericResponse(ResponseType.FILE, file,"test.txt");
+			response.setContentType("text/plain");
+			return response;
+		default:
+			return new GenericResponse(ResponseType.JSON, "");
+		}
+	}
+
+	// this method checks if the user has the right to "view" this page
+	// you can check the current session and return the page you want to be rendered
+	// you could redirect to an error page here instead of rendering the page that was requested
+	@Override
+	public String handlePageRequest(String page, GenericSession session) {
+		return page;
+	}
 }
 ```
 
